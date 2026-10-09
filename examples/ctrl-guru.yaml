@@ -1,0 +1,26 @@
+# Settings for `ctrl-guru plan`. Put this file in the root of your repository.
+# It holds everything a task file holds except the tasks, which the lead agent writes.
+
+maxParallel: 3
+budgetUsd: 10 # cap for the whole run
+
+setup:
+  - npm ci
+
+verify:
+  - npm test
+
+review:
+  budgetUsd: 1
+
+defaults:
+  provider: claude
+  budgetUsd: 2
+  timeoutMinutes: 30
+  maxAttempts: 2
+
+providers:
+  claude:
+    model: sonnet
+    allowedTools:
+      - Bash(npm test:*)

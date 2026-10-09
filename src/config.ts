@@ -74,7 +74,11 @@ export type Config = z.infer<typeof configSchema>;
 export type TaskSpec = Config['tasks'][number];
 
 export function parseConfig(text: string): Config {
-  const result = configSchema.safeParse(parseYaml(text));
+  return parseConfigObject(parseYaml(text));
+}
+
+export function parseConfigObject(value: unknown): Config {
+  const result = configSchema.safeParse(value);
   if (!result.success) {
     throw new Error(`Invalid config:\n${z.prettifyError(result.error)}`);
   }

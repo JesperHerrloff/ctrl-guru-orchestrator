@@ -2,7 +2,7 @@
 
 Orchestrates a team of AI coding agents that work in parallel, each in its own git worktree.
 
-Status: phase 3. Tasks are written by hand in a YAML file and run by Claude Code or Codex. Each task can be gated by your test commands and by a review from the other provider. A terminal UI shows the run and lets you read diffs and merge finished tasks. OpenRouter and a lead agent come later.
+Status: phase 4. A lead agent splits a goal into tasks, or you write them by hand in a YAML file. Claude Code or Codex agents do the tasks. Each task can be gated by your test commands and by a review from the other provider. A terminal UI shows the run and lets you read diffs and merge finished tasks. OpenRouter comes later.
 
 ## Requirements
 
@@ -17,11 +17,18 @@ Status: phase 3. Tasks are written by hand in a YAML file and run by Claude Code
 ```bash
 npm install
 npm run build
+node dist/cli.js plan "Add a /health endpoint with tests" --repo /path/to/your/repo
+```
+
+Or run a task file you wrote yourself:
+
+```bash
 node dist/cli.js run examples/tasks.yaml --repo /path/to/your/repo
 ```
 
 | Command | What it does |
 |---|---|
+| `plan <goal>` | Lets a lead agent split a goal into tasks for you to approve |
 | `run <tasks.yaml>` | Starts a new run from a task file |
 | `resume` | Continues a run: retries failed, blocked and interrupted tasks |
 | `ui` | Opens the terminal UI for a run without starting agents |
@@ -32,6 +39,26 @@ node dist/cli.js run examples/tasks.yaml --repo /path/to/your/repo
 | `clean` | Removes the worktrees of a run and keeps its branches |
 
 `--repo <path>` picks the repository (default: current directory) and `--run <id>` picks the run (default: the latest). `--plain` prints a line-based log instead of the terminal UI; this is also what you get when the output is not a terminal.
+
+## Planning with a lead agent
+
+`plan` starts a lead agent that reads the repository without changing it and proposes a task file. It prints the tasks, the paths each one owns and their order, and saves the plan under `.ctrl-guru/plans/`. Nothing runs until you approve: answer `y` to start the run, or read and edit the file and start it with `run`.
+
+The lead agent decides only the tasks. Gates, budgets, models and permissions come from `ctrl-guru.yaml` in the root of your repository; see [examples/ctrl-guru.yaml](examples/ctrl-guru.yaml). Without that file the defaults apply, which means no verify commands and no review.
+
+A plan is rejected and sent back to the lead agent, up to three times, if:
+
+- a task lists no owned paths,
+- two tasks own overlapping paths and neither depends on the other, or
+- it has more tasks than `--max-tasks` (default 6).
+
+| Option | Meaning |
+|---|---|
+| `--lead <provider>` | Provider of the lead agent (default: the default provider) |
+| `--settings <file>` | Settings file to use instead of `ctrl-guru.yaml` |
+| `--out <file>` | Where to save the plan |
+| `--max-tasks <n>` | Largest plan the lead agent may propose |
+| `--budget <usd>` | Budget for planning (default 1) |
 
 ## Terminal UI
 
@@ -77,6 +104,7 @@ See [examples/tasks.yaml](examples/tasks.yaml).
 ## Limitations
 
 - Codex reports token usage but no price. Codex work is counted as $0, so dollar budgets only limit Claude agents.
+- The lead agent only plans. It does not follow the run, re-plan when a task fails or merge the results.
 - A failed reviewer run (error, timeout or no verdict) fails the attempt, and the next attempt redoes the task from a fresh worktree.
 - Claude reviewers cannot run shell commands, so they review by reading. Codex reviewers run in a read-only sandbox and can run tests.
 

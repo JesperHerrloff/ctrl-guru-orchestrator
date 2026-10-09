@@ -272,7 +272,7 @@ export async function runScheduler(options: SchedulerOptions): Promise<RunSummar
   return { counts, costUsd: store.totalCost(runId), budgetExceeded };
 }
 
-function eventData(event: AgentEvent): string {
+export function eventData(event: AgentEvent): string {
   switch (event.kind) {
     case 'session':
       return event.sessionId;
