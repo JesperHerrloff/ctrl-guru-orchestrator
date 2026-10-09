@@ -1,0 +1,32 @@
+# Run with: ctrl-guru run examples/tasks.yaml --repo /path/to/your/repo
+
+maxParallel: 2
+budgetUsd: 5 # cap for the whole run
+
+defaults:
+  provider: claude
+  model: sonnet
+  budgetUsd: 2 # cap per task, across attempts
+  timeoutMinutes: 30
+  maxAttempts: 2
+
+providers:
+  claude:
+    permissionMode: acceptEdits
+    # Shell commands are denied unless listed here.
+    allowedTools:
+      - Bash(npm test:*)
+
+tasks:
+  - id: greet
+    title: Add greet module
+    prompt: |
+      Create src/greet.js exporting a function greet(name) that returns "Hello, <name>!".
+    owns: [src/greet.js]
+
+  - id: usage
+    title: Document greet
+    prompt: |
+      Add a "Usage" section to README.md showing how to call greet from src/greet.js.
+    dependsOn: [greet]
+    owns: [README.md]

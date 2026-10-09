@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.ctrl-guru/
+*.log
+.DS_Store
