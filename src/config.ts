@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 
-export const PROVIDERS = ['claude'] as const;
+export const PROVIDERS = ['claude', 'codex'] as const;
+export type ProviderName = (typeof PROVIDERS)[number];
 
 const taskSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]*$/, 'use lowercase letters, digits and dashes'),
@@ -24,10 +25,26 @@ const configSchema = z.object({
   maxParallel: z.number().int().positive().default(3),
   // Cap for the whole run. No new task starts once it is reached.
   budgetUsd: z.number().positive().optional(),
+  // Shell commands run in every fresh worktree before the agent starts,
+  // for example to install dependencies.
+  setup: z.array(z.string()).default([]),
+  // Shell commands that must all succeed in the worktree before a task counts
+  // as done, for example the test suite.
+  verify: z.array(z.string()).default([]),
+  commandTimeoutMinutes: z.number().positive().default(10),
+  // When present, another agent reviews each task's diff. The reviewer defaults
+  // to a different provider than the one that did the work.
+  review: z
+    .object({
+      provider: z.enum(PROVIDERS).optional(),
+      model: z.string().optional(),
+      budgetUsd: z.number().positive().default(1),
+      timeoutMinutes: z.number().positive().default(10),
+    })
+    .optional(),
   defaults: z
     .object({
       provider: z.enum(PROVIDERS).default('claude'),
-      model: z.string().optional(),
       budgetUsd: z.number().positive().default(2),
       timeoutMinutes: z.number().positive().default(30),
       maxAttempts: z.number().int().positive().default(2),
@@ -37,8 +54,15 @@ const configSchema = z.object({
     .object({
       claude: z
         .object({
+          model: z.string().optional(),
           permissionMode: z.string().default('acceptEdits'),
           allowedTools: z.array(z.string()).default([]),
+        })
+        .prefault({}),
+      codex: z
+        .object({
+          model: z.string().optional(),
+          sandbox: z.enum(['workspace-write', 'danger-full-access']).default('workspace-write'),
         })
         .prefault({}),
     })

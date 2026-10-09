@@ -7,7 +7,16 @@ describe('parseConfig', () => {
     expect(config.maxParallel).toBe(3);
     expect(config.defaults).toMatchObject({ provider: 'claude', budgetUsd: 2, maxAttempts: 2 });
     expect(config.providers.claude.permissionMode).toBe('acceptEdits');
+    expect(config.providers.codex.sandbox).toBe('workspace-write');
+    expect(config).toMatchObject({ setup: [], verify: [] });
+    expect(config.review).toBeUndefined();
     expect(config.tasks[0]).toMatchObject({ dependsOn: [], owns: [] });
+  });
+
+  it('enables review with defaults from an empty mapping', () => {
+    const config = parseConfig('review: {}\ntasks:\n  - {id: a, prompt: x, provider: codex}\n');
+    expect(config.review).toEqual({ budgetUsd: 1, timeoutMinutes: 10 });
+    expect(config.tasks[0]!.provider).toBe('codex');
   });
 
   it('rejects unknown dependencies', () => {

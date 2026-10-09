@@ -9,6 +9,8 @@ export interface AgentRunOptions {
   prompt: string;
   model?: string;
   budgetUsd?: number;
+  // The agent may read the directory but must not change it.
+  readOnly?: boolean;
   signal: AbortSignal;
   onEvent: (event: AgentEvent) => void;
 }

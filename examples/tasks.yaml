@@ -3,19 +3,34 @@
 maxParallel: 2
 budgetUsd: 5 # cap for the whole run
 
+# Run in every fresh worktree before the agent starts.
+setup:
+  - npm ci
+
+# Must succeed in the worktree before a task counts as done.
+verify:
+  - npm test
+
+# Another provider reviews each task's diff. Remove to skip review.
+review:
+  budgetUsd: 1
+  timeoutMinutes: 10
+
 defaults:
   provider: claude
-  model: sonnet
   budgetUsd: 2 # cap per task, across attempts
   timeoutMinutes: 30
   maxAttempts: 2
 
 providers:
   claude:
+    model: sonnet
     permissionMode: acceptEdits
     # Shell commands are denied unless listed here.
     allowedTools:
       - Bash(npm test:*)
+  codex:
+    sandbox: workspace-write
 
 tasks:
   - id: greet
@@ -26,6 +41,7 @@ tasks:
 
   - id: usage
     title: Document greet
+    provider: codex
     prompt: |
       Add a "Usage" section to README.md showing how to call greet from src/greet.js.
     dependsOn: [greet]

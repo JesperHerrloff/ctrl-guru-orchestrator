@@ -75,6 +75,22 @@ export class Worktrees {
     return true;
   }
 
+  head(path: string): Promise<string> {
+    return git(path, ['rev-parse', 'HEAD']);
+  }
+
+  // Committed changes of the task since the given commit.
+  diffSince(path: string, sha: string): Promise<string> {
+    return git(path, ['diff', sha, 'HEAD']);
+  }
+
+  // Throws away uncommitted changes. Ignored files, such as installed
+  // dependencies, are kept.
+  async discardChanges(path: string): Promise<void> {
+    await git(path, ['reset', '--hard', '-q', 'HEAD']);
+    await git(path, ['clean', '-fdq']);
+  }
+
   async remove(runId: string, taskId: string): Promise<void> {
     const path = this.pathFor(runId, taskId);
     await git(this.repoRoot, ['worktree', 'remove', '--force', path]).catch(() => {});

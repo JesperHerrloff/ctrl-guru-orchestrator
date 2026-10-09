@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { loadConfig, type Config } from './config.js';
 import { ClaudeAdapter } from './providers/claude.js';
+import { CodexAdapter } from './providers/codex.js';
 import type { AgentAdapter } from './providers/types.js';
 import { formatEvent, runScheduler } from './scheduler.js';
 import { Store, type RunRecord } from './store.js';
@@ -125,7 +126,10 @@ async function execute(store: Store, worktrees: Worktrees, run: RunRecord): Prom
 }
 
 function createAdapters(config: Config): Record<string, AgentAdapter> {
-  return { claude: new ClaudeAdapter(config.providers.claude) };
+  return {
+    claude: new ClaudeAdapter(config.providers.claude),
+    codex: new CodexAdapter(config.providers.codex),
+  };
 }
 
 function printStatus(store: Store, worktrees: Worktrees, run: RunRecord): void {
