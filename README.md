@@ -2,7 +2,7 @@
 
 Orchestrates a team of AI coding agents that work in parallel, each in its own git worktree.
 
-Status: phase 2. Tasks are written by hand in a YAML file and run by Claude Code or Codex. Each task can be gated by your test commands and by a review from the other provider. OpenRouter, a TUI and a lead agent come later.
+Status: phase 3. Tasks are written by hand in a YAML file and run by Claude Code or Codex. Each task can be gated by your test commands and by a review from the other provider. A terminal UI shows the run and lets you read diffs and merge finished tasks. OpenRouter and a lead agent come later.
 
 ## Requirements
 
@@ -24,11 +24,29 @@ node dist/cli.js run examples/tasks.yaml --repo /path/to/your/repo
 |---|---|
 | `run <tasks.yaml>` | Starts a new run from a task file |
 | `resume` | Continues a run: retries failed, blocked and interrupted tasks |
+| `ui` | Opens the terminal UI for a run without starting agents |
 | `status` | Shows the tasks of a run |
 | `logs <task>` | Prints the event log of a task |
+| `diff <task>` | Prints what a task changed |
+| `merge <task>` | Merges a finished task into the checked-out branch |
 | `clean` | Removes the worktrees of a run and keeps its branches |
 
-`--repo <path>` picks the repository (default: current directory) and `--run <id>` picks the run (default: the latest).
+`--repo <path>` picks the repository (default: current directory) and `--run <id>` picks the run (default: the latest). `--plain` prints a line-based log instead of the terminal UI; this is also what you get when the output is not a terminal.
+
+## Terminal UI
+
+`run` and `resume` open the terminal UI. It lists the tasks with status, provider and cost, and shows the live log or the diff of the selected task. It stays open when the run finishes so you can review and merge.
+
+| Key | Action |
+|---|---|
+| `↑` `↓` or `k` `j` | Select a task |
+| `l` | Show the log |
+| `d` | Show the diff |
+| `PgUp` `PgDn` or `u` `n` | Scroll |
+| `m` | Merge the selected task into the checked-out branch, after a `y` to confirm |
+| `q` | Stop the agents while a run is active, otherwise quit |
+
+A merged task is marked with `⇄`. Merging needs a checkout without uncommitted changes, and a merge that conflicts is aborted.
 
 ## How a run works
 
@@ -39,9 +57,9 @@ node dist/cli.js run examples/tasks.yaml --repo /path/to/your/repo
 5. ctrl-guru commits the changes. If `review` is set, an agent from another provider reviews the diff read-only and ends with an approve or reject verdict.
 6. If verify fails or the reviewer rejects, the same agent gets another attempt in the same worktree, with the command output or the review as feedback. If the agent itself fails or times out, the next attempt starts in a fresh worktree.
 7. After `maxAttempts` the task is marked `failed`, and every task that depends on it is marked `blocked`.
-8. You review and merge the branches of the finished tasks yourself.
+8. You review the finished tasks and merge them, from the terminal UI or with `diff` and `merge`. The branch of a task includes the changes of the tasks it depends on.
 
-Your own checkout is never touched. State lives in `.ctrl-guru/state.db`, and `.ctrl-guru/` is added to `.git/info/exclude`.
+Your own checkout is only changed when you merge. State lives in `.ctrl-guru/state.db`, and `.ctrl-guru/` is added to `.git/info/exclude`.
 
 ## Task file
 

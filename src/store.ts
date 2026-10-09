@@ -16,6 +16,8 @@ export interface TaskRecord {
   status: TaskStatus;
   attempts: number;
   costUsd: number;
+  // Commit the task's own changes start from: the run base plus its dependencies.
+  baseSha: string | null;
   sessionId: string | null;
   summary: string | null;
   error: string | null;
@@ -34,6 +36,7 @@ const TASK_COLUMNS = {
   status: 'status',
   attempts: 'attempts',
   costUsd: 'cost_usd',
+  baseSha: 'base_sha',
   sessionId: 'session_id',
   summary: 'summary',
   error: 'error',
@@ -62,6 +65,7 @@ export class Store {
         status TEXT NOT NULL DEFAULT 'pending',
         attempts INTEGER NOT NULL DEFAULT 0,
         cost_usd REAL NOT NULL DEFAULT 0,
+        base_sha TEXT,
         session_id TEXT,
         summary TEXT,
         error TEXT,
@@ -113,6 +117,7 @@ export class Store {
         status: row.status,
         attempts: row.attempts,
         costUsd: row.cost_usd,
+        baseSha: row.base_sha,
         sessionId: row.session_id,
         summary: row.summary,
         error: row.error,
@@ -138,6 +143,15 @@ export class Store {
     this.db
       .prepare('INSERT INTO events (run_id, task_id, ts, kind, data) VALUES (?, ?, ?, ?, ?)')
       .run(runId, taskId, new Date().toISOString(), kind, data);
+  }
+
+  // The most recent events of a task, oldest first.
+  tailEvents(runId: string, taskId: string, limit: number): EventRecord[] {
+    return this.db
+      .prepare('SELECT ts, task_id, kind, data FROM events WHERE run_id = ? AND task_id = ? ORDER BY seq DESC LIMIT ?')
+      .all(runId, taskId, limit)
+      .map((row: any) => ({ ts: row.ts, taskId: row.task_id, kind: row.kind, data: row.data }))
+      .reverse();
   }
 
   listEvents(runId: string, taskId: string): EventRecord[] {

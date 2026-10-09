@@ -177,6 +177,7 @@ export async function runScheduler(options: SchedulerOptions): Promise<RunSummar
         } else {
           path = await worktrees.create(runId, spec.id, run.baseSha, depBranches);
           baseSha = await worktrees.head(path);
+          store.updateTask(runId, spec.id, { baseSha });
           const setupFailure = await runCommands('setup', config.setup, path);
           if (setupFailure) throw new Error(`setup ${setupFailure}`);
         }

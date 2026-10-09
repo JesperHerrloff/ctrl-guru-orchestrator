@@ -91,6 +91,36 @@ export class Worktrees {
     await git(path, ['clean', '-fdq']);
   }
 
+  // What a task branch changed since the given commit.
+  diffBranch(fromSha: string, branch: string): Promise<string> {
+    return git(this.repoRoot, ['diff', fromSha, branch]);
+  }
+
+  currentBranch(): Promise<string> {
+    return git(this.repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']);
+  }
+
+  isMerged(branch: string): Promise<boolean> {
+    return git(this.repoRoot, ['merge-base', '--is-ancestor', branch, 'HEAD']).then(
+      () => true,
+      () => false,
+    );
+  }
+
+  // Merges a task branch into the branch checked out in the main checkout.
+  // A conflicting merge is aborted, so the checkout is left as it was.
+  async mergeIntoCurrent(branch: string): Promise<void> {
+    if (await git(this.repoRoot, ['status', '--porcelain', '--untracked-files=no'])) {
+      throw new Error('The checkout has uncommitted changes. Commit or stash them before merging.');
+    }
+    try {
+      await git(this.repoRoot, ['merge', '--no-ff', '--no-edit', branch]);
+    } catch (err) {
+      await git(this.repoRoot, ['merge', '--abort']).catch(() => {});
+      throw new Error(`Could not merge ${branch}: ${(err as Error).message}`);
+    }
+  }
+
   async remove(runId: string, taskId: string): Promise<void> {
     const path = this.pathFor(runId, taskId);
     await git(this.repoRoot, ['worktree', 'remove', '--force', path]).catch(() => {});
