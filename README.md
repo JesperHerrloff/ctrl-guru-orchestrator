@@ -2,7 +2,7 @@
 
 Orchestrates a team of AI coding agents that work in parallel, each in its own git worktree.
 
-Status: phase 4. A lead agent splits a goal into tasks, or you write them by hand in a YAML file. Claude Code or Codex agents do the tasks. Each task can be gated by your test commands and by a review from the other provider. A terminal UI shows the run and lets you read diffs and merge finished tasks. OpenRouter comes later.
+Status: phase 4. A lead agent splits a goal into tasks, or you write them by hand in a YAML file. Claude Code, Codex or opencode agents do the tasks; opencode gives access to OpenRouter models. Each task can be gated by your test commands and by a review from another provider. A terminal UI shows the run and lets you read diffs and merge finished tasks.
 
 ## Requirements
 
@@ -11,6 +11,9 @@ Status: phase 4. A lead agent splits a goal into tasks, or you write them by han
 - git
 - [Claude Code](https://claude.com/claude-code) installed and logged in (`claude` on your PATH)
 - [Codex CLI](https://github.com/openai/codex) installed and logged in (`codex` on your PATH), if you use Codex as a worker or reviewer
+- [opencode](https://opencode.ai) installed and logged in to a provider such as OpenRouter (`opencode auth login`), if you use OpenRouter models
+
+ctrl-guru never handles API keys. Each CLI uses its own login.
 
 ## Usage
 
@@ -94,16 +97,20 @@ See [examples/tasks.yaml](examples/tasks.yaml).
 
 - `dependsOn` orders tasks and gives a task the changes of the tasks it depends on.
 - `owns` lists the files or directories a task is expected to change. Two tasks with overlapping paths never run at the same time. It is not enforced on what the agent actually edits.
-- `provider` on a task, or under `defaults`, picks `claude` or `codex`.
+- `provider` on a task, or under `defaults`, picks `claude`, `codex` or `opencode`.
+- `providers.<name>.model` sets the model of a provider, and `model` on a task overrides it. opencode has no default model: set `providers.opencode.model` in opencode's `provider/model` form, for example `openrouter/~google/gemini-flash-latest`. `opencode models` lists the choices.
 - `setup` lists shell commands run in every fresh worktree, such as `npm ci`. A worktree has no installed dependencies until you install them.
 - `verify` lists shell commands that must succeed before a task is done, such as `npm test`.
-- `review` turns on review. By default the reviewer is the other provider than the one that did the work; `review.provider` pins it.
+- `review` turns on review. By default the reviewer is the first of `claude` and `codex` that did not do the work; `review.provider` pins it, for example to `opencode`.
 - `budgetUsd` at the top level caps the whole run: no new task starts once it is reached. Under `defaults` or on a task it caps that task across its attempts.
 - `providers.claude.allowedTools` lists the shell commands Claude agents may run. Everything else that would need approval is denied. `verify` runs outside the agent and is not affected.
 
 ## Limitations
 
-- Codex reports token usage but no price. Codex work is counted as $0, so dollar budgets only limit Claude agents.
+- Codex reports token usage but no price. Codex work is counted as $0, so dollar budgets do not limit Codex agents.
+- opencode has no sandbox: its agents can run any shell command, also outside the worktree. Use it on code and machines where that is acceptable.
+- opencode has no budget flag. ctrl-guru stops an opencode agent once the cost it has reported reaches the budget, so it can overshoot by one step, and the reported cost can be slightly low.
+- As a reviewer or lead agent, opencode runs its `plan` agent, which does not edit files but can still run shell commands. ctrl-guru discards anything a reviewer leaves in the worktree.
 - The lead agent only plans. It does not follow the run, re-plan when a task fails or merge the results.
 - A failed reviewer run (error, timeout or no verdict) fails the attempt, and the next attempt redoes the task from a fresh worktree.
 - Claude reviewers cannot run shell commands, so they review by reading. Codex reviewers run in a read-only sandbox and can run tests.

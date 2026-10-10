@@ -9,6 +9,7 @@ import { loadConfig, parseConfigObject, PROVIDERS, type Config, type ProviderNam
 import { createPlan, describePlan } from './planner.js';
 import { ClaudeAdapter } from './providers/claude.js';
 import { CodexAdapter } from './providers/codex.js';
+import { OpencodeAdapter } from './providers/opencode.js';
 import type { AgentAdapter } from './providers/types.js';
 import { eventData, formatEvent, runScheduler, type RunSummary } from './scheduler.js';
 import { Store, type RunRecord } from './store.js';
@@ -255,6 +256,7 @@ function createAdapters(config: Config): Record<string, AgentAdapter> {
   return {
     claude: new ClaudeAdapter(config.providers.claude),
     codex: new CodexAdapter(config.providers.codex),
+    opencode: new OpencodeAdapter(config.providers.opencode),
   };
 }
 

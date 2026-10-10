@@ -31,6 +31,9 @@ providers:
       - Bash(npm test:*)
   codex:
     sandbox: workspace-write
+  # Needed only for tasks or reviews with provider: opencode.
+  opencode:
+    model: openrouter/~google/gemini-flash-latest
 
 tasks:
   - id: greet

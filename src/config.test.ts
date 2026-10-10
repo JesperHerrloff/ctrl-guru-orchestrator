@@ -19,6 +19,14 @@ describe('parseConfig', () => {
     expect(config.tasks[0]!.provider).toBe('codex');
   });
 
+  it('requires a model for opencode tasks and reviews', () => {
+    const task = 'tasks:\n  - {id: a, prompt: x, provider: opencode}\n';
+    expect(() => parseConfig(task)).toThrow(/task "a" uses opencode but no model is set/);
+    expect(() => parseConfig(`review: {provider: opencode}\ntasks:\n  - {id: a, prompt: x}\n`)).toThrow(/review uses opencode/);
+    expect(parseConfig(`providers: {opencode: {model: openrouter/x}}\nreview: {provider: opencode}\n${task}`).tasks).toHaveLength(1);
+    expect(parseConfig('tasks:\n  - {id: a, prompt: x, provider: opencode, model: openrouter/y}\n').tasks[0]!.model).toBe('openrouter/y');
+  });
+
   it('rejects unknown dependencies', () => {
     expect(() => parseConfig('tasks:\n  - id: a\n    prompt: x\n    dependsOn: [b]\n')).toThrow(/unknown task "b"/);
   });

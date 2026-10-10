@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 
-export const PROVIDERS = ['claude', 'codex'] as const;
+export const PROVIDERS = ['claude', 'codex', 'opencode'] as const;
 export type ProviderName = (typeof PROVIDERS)[number];
 
 const taskSchema = z.object({
@@ -65,6 +65,12 @@ const configSchema = z.object({
           sandbox: z.enum(['workspace-write', 'danger-full-access']).default('workspace-write'),
         })
         .prefault({}),
+      opencode: z
+        .object({
+          // In opencode's provider/model format, for example openrouter/~google/gemini-flash-latest.
+          model: z.string().optional(),
+        })
+        .prefault({}),
     })
     .prefault({}),
   tasks: z.array(taskSchema).min(1),
@@ -96,6 +102,17 @@ export function parseConfigObject(value: unknown): Config {
     }
   }
   assertAcyclic(config.tasks);
+
+  // opencode has no default model, unlike the other CLIs.
+  const fallbackModel = config.providers.opencode.model;
+  for (const task of config.tasks) {
+    if ((task.provider ?? config.defaults.provider) === 'opencode' && !(task.model ?? fallbackModel)) {
+      throw new Error(`Invalid config: task "${task.id}" uses opencode but no model is set. Set providers.opencode.model or the task's model.`);
+    }
+  }
+  if (config.review?.provider === 'opencode' && !(config.review.model ?? fallbackModel)) {
+    throw new Error('Invalid config: review uses opencode but no model is set. Set providers.opencode.model or review.model.');
+  }
   return config;
 }
 
